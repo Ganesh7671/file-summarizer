@@ -1,0 +1,929 @@
+=<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>✨ AI Document Summarizer</title>
+    <style>
+        /* =========================================
+           CSS RESET & ROOT VARIABLES
+        ========================================= */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+
+        :root {
+            --bg:           #f0eef8;        /* soft lavender background */
+            --card:         #ffffff;
+            --lavender:     #c9b8f0;
+            --lavender-dark:#a991e0;
+            --pink:         #f7c5d5;
+            --mint:         #b8edd8;
+            --mint-dark:    #7dd4af;
+            --text:         #3d3558;
+            --text-light:   #7a6ea0;
+            --border:       #e0d9f5;
+            --shadow:       rgba(100, 80, 180, 0.12);
+            --danger:       #f28b8b;
+            --radius:       16px;
+            --radius-sm:    10px;
+        }
+
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 32px 16px 64px;
+        }
+
+
+        /* =========================================
+           LAYOUT
+        ========================================= */
+        .page-wrapper {
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+
+        /* =========================================
+           HEADER
+        ========================================= */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+
+        .header h1 span {
+            background: linear-gradient(135deg, var(--lavender-dark), var(--mint-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+
+        .header p {
+            margin-top: 8px;
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+
+        /* =========================================
+           CARDS
+        ========================================= */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1.5px solid var(--border);
+            box-shadow: 0 4px 24px var(--shadow);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+
+        .card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+
+        /* =========================================
+           DROP ZONE
+        ========================================= */
+        .drop-zone {
+            border: 2.5px dashed var(--lavender);
+            border-radius: var(--radius-sm);
+            padding: 42px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #faf8ff;
+            position: relative;
+        }
+
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--lavender-dark);
+            background: #f3effb;
+            transform: scale(1.01);
+        }
+
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+
+        .drop-zone .icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+
+        .drop-zone p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+
+        .drop-zone .hint {
+            font-size: 0.82rem;
+            color: #b0a8c8;
+        }
+
+
+        /* =========================================
+           UPLOAD BUTTON
+        ========================================= */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--lavender-dark), var(--mint-dark));
+            color: white;
+            box-shadow: 0 4px 16px rgba(169, 145, 224, 0.4);
+        }
+
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(169, 145, 224, 0.5);
+        }
+
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+        }
+
+
+        .btn-download {
+            background: var(--mint);
+            color: var(--text);
+            padding: 6px 14px;
+            font-size: 0.82rem;
+        }
+
+
+        .upload-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+
+        /* =========================================
+           SELECTED FILES PREVIEW
+        ========================================= */
+        .selected-files {
+            margin-top: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+
+        .file-chip {
+            background: var(--pink);
+            border-radius: 50px;
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+
+        .file-chip .remove-chip {
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+
+
+        .file-chip .remove-chip:hover { opacity: 1; }
+
+
+        /* =========================================
+           PROGRESS BAR
+        ========================================= */
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+
+        .progress-container.visible { display: block; }
+
+
+        .progress-label {
+            font-size: 0.88rem;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+
+        .progress-bar-bg {
+            background: var(--border);
+            border-radius: 50px;
+            height: 10px;
+            overflow: hidden;
+        }
+
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 50px;
+            background: linear-gradient(90deg, var(--lavender-dark), var(--mint-dark));
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+
+        /* =========================================
+           TOAST NOTIFICATION
+        ========================================= */
+        .toast {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            background: var(--text);
+            color: white;
+            padding: 14px 22px;
+            border-radius: var(--radius-sm);
+            font-size: 0.92rem;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.3s ease;
+            z-index: 9999;
+            max-width: 320px;
+        }
+
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+
+        .toast.success { background: var(--mint-dark); }
+        .toast.error   { background: var(--danger); }
+
+
+        /* =========================================
+           FILE HISTORY LIST
+        ========================================= */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+
+        .file-item {
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 18px;
+            transition: box-shadow 0.2s;
+            background: #fdfcff;
+        }
+
+
+        .file-item:hover {
+            box-shadow: 0 2px 16px var(--shadow);
+        }
+
+
+        .file-item-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+
+        .file-info h3 {
+            font-size: 0.97rem;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+
+        .file-meta {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+
+
+        .badge-image  { background: var(--pink);    color: #9b3060; }
+        .badge-text   { background: var(--lavender); color: #5a3da0; }
+        .badge-size   { background: var(--mint);     color: #2e7a5a; }
+
+
+        .file-date {
+            font-size: 0.78rem;
+            color: var(--text-light);
+        }
+
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+
+        /* Summary box */
+        .summary-box {
+            margin-top: 14px;
+            background: linear-gradient(135deg, #f9f7fe, #f0faf6);
+            border-left: 4px solid var(--lavender-dark);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            padding: 14px 16px;
+        }
+
+
+        .summary-box .summary-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--lavender-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+
+        .summary-box p {
+            font-size: 0.9rem;
+            line-height: 1.65;
+            color: var(--text);
+        }
+
+
+        /* Image preview */
+        .image-preview {
+            margin-top: 12px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            max-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0eef8;
+        }
+
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: var(--radius-sm);
+        }
+
+
+        /* =========================================
+           EMPTY STATE
+        ========================================= */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+
+
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+
+
+        /* =========================================
+           LOADING SPINNER
+        ========================================= */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+
+        /* =========================================
+           RESPONSIVE
+        ========================================= */
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.7rem; }
+            .card       { padding: 20px; }
+            .drop-zone  { padding: 30px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+
+<div class="page-wrapper">
+
+
+    <!-- ===== HEADER ===== -->
+    <div class="header">
+        <h1>✨ <span>AI Document Summarizer</span></h1>
+        <p>Upload PDFs, Word docs, or images — get instant AI-powered summaries</p>
+    </div>
+
+
+    <!-- ===== UPLOAD CARD ===== -->
+    <div class="card">
+        <h2>📤 Upload Files</h2>
+
+
+        <!-- Drag & Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+            <input
+                    type="file"
+                    id="fileInput"
+                    multiple
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+            <span class="icon">🗂️</span>
+            <p><strong>Drag & drop files here</strong> or click to browse</p>
+            <p class="hint">Supported: PDF, DOC, DOCX, JPG, PNG • Max 50MB each</p>
+        </div>
+
+
+        <!-- Chips showing selected files -->
+        <div class="selected-files" id="selectedFiles"></div>
+
+
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-label">
+                <span id="progressText">Uploading & generating summaries...</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+
+        <!-- Upload Button -->
+        <div class="upload-actions">
+            <button class="btn btn-primary" id="uploadBtn" onclick="uploadFiles()" disabled>
+                🚀 Upload & Summarize
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ===== FILE HISTORY CARD ===== -->
+    <div class="card">
+        <h2>📚 Upload History</h2>
+        <div class="file-list" id="fileList">
+            <div class="empty-state">
+                <div class="empty-icon">🌸</div>
+                <p>No files uploaded yet.<br>Upload your first document above!</p>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+
+<script>
+    // =========================================
+    // STATE
+    // =========================================
+    const API_BASE = 'http://localhost:8090';
+    let selectedFiles = [];      // Array of File objects
+
+
+    // =========================================
+    // DOM REFERENCES
+    // =========================================
+    const dropZone        = document.getElementById('dropZone');
+    const fileInput       = document.getElementById('fileInput');
+    const selectedFilesEl = document.getElementById('selectedFiles');
+    const uploadBtn       = document.getElementById('uploadBtn');
+    const fileList        = document.getElementById('fileList');
+    const progressCont    = document.getElementById('progressContainer');
+    const progressFill    = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressText    = document.getElementById('progressText');
+
+
+    // =========================================
+    // DRAG & DROP EVENTS
+    // =========================================
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        addFiles(files);
+    });
+
+
+    // File input change event
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        addFiles(files);
+        fileInput.value = ''; // reset so same file can be re-selected
+    });
+
+
+    // =========================================
+    // FILE SELECTION LOGIC
+    // =========================================
+    function addFiles(newFiles) {
+        const allowed = ['application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/jpeg', 'image/png'];
+
+
+        newFiles.forEach(file => {
+            if (!allowed.includes(file.type)) {
+                showToast(`❌ "${file.name}" is not a supported type.`, 'error');
+                return;
+            }
+            if (file.size > 50 * 1024 * 1024) {
+                showToast(`❌ "${file.name}" exceeds 50MB limit.`, 'error');
+                return;
+            }
+            // Avoid duplicates
+            if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                selectedFiles.push(file);
+            }
+        });
+
+
+        renderChips();
+        uploadBtn.disabled = selectedFiles.length === 0;
+    }
+
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        renderChips();
+        uploadBtn.disabled = selectedFiles.length === 0;
+    }
+
+
+    function renderChips() {
+        selectedFilesEl.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const chip = document.createElement('div');
+            chip.className = 'file-chip';
+            chip.innerHTML = `
+               ${getFileEmoji(file.type)}
+               <span>${file.name}</span>
+               <span class="remove-chip" onclick="removeFile(${index})">✕</span>
+           `;
+            selectedFilesEl.appendChild(chip);
+        });
+    }
+
+
+    // =========================================
+    // UPLOAD LOGIC
+    // =========================================
+    async function uploadFiles() {
+        if (selectedFiles.length === 0) return;
+
+
+        // Show progress
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<span class="spinner"></span> Processing...';
+        progressCont.classList.add('visible');
+        setProgress(10, 'Uploading files...');
+
+
+        const formData = new FormData();
+        selectedFiles.forEach(file => formData.append('files', file));
+
+
+        try {
+            setProgress(30, 'Extracting text...');
+
+
+            const response = await fetch(`${API_BASE}/files/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+
+            setProgress(70, 'Generating AI summaries...');
+
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Upload failed');
+            }
+
+
+            setProgress(100, 'Done!');
+            showToast(`✅ ${selectedFiles.length} file(s) uploaded and summarized!`, 'success');
+
+
+            // Reset state
+            selectedFiles = [];
+            renderChips();
+            uploadBtn.disabled = true;
+
+
+            // Reload the file list
+            await loadFileHistory();
+
+
+        } catch (err) {
+            showToast(`❌ ${err.message}`, 'error');
+            setProgress(0, '');
+            progressCont.classList.remove('visible');
+        } finally {
+            uploadBtn.innerHTML = '🚀 Upload & Summarize';
+            uploadBtn.disabled = selectedFiles.length === 0;
+            setTimeout(() => {
+                progressCont.classList.remove('visible');
+                setProgress(0, '');
+            }, 1500);
+        }
+    }
+
+
+    function setProgress(percent, text) {
+        progressFill.style.width = percent + '%';
+        progressPercent.textContent = percent + '%';
+        if (text) progressText.textContent = text;
+    }
+
+
+    // =========================================
+    // LOAD FILE HISTORY
+    // =========================================
+    async function loadFileHistory() {
+        try {
+            const response = await fetch(`${API_BASE}/files`);
+            if (!response.ok) throw new Error('Failed to load history');
+
+
+            const files = await response.json();
+            renderFileList(files);
+        } catch (err) {
+            console.error('Could not load file history:', err);
+        }
+    }
+
+
+    function renderFileList(files) {
+        if (!files || files.length === 0) {
+            fileList.innerHTML = `
+               <div class="empty-state">
+                   <div class="empty-icon">🌸</div>
+                   <p>No files uploaded yet.<br>Upload your first document above!</p>
+               </div>
+           `;
+            return;
+        }
+
+
+        fileList.innerHTML = files.map(file => `
+           <div class="file-item" id="item-${file.id}">
+               <div class="file-item-header">
+                   <div class="file-info">
+                       <h3>${getFileEmoji(file.fileType)} ${escapeHtml(file.fileName)}</h3>
+                       <div class="file-meta">
+                           <span class="badge ${file.category === 'IMAGE' ? 'badge-image' : 'badge-text'}">
+                               ${file.category === 'IMAGE' ? '🖼️ Image' : '📄 Document'}
+                           </span>
+                           <span class="badge badge-size">${formatBytes(file.fileSize)}</span>
+                           <span class="file-date">📅 ${formatDate(file.uploadedAt)}</span>
+                       </div>
+                   </div>
+                   <div class="file-actions">
+                       <button class="btn btn-download" onclick="downloadFile('${file.id}', '${escapeHtml(file.fileName)}')">
+                           ⬇️ Download
+                       </button>
+                       <button class="btn btn-danger" onclick="deleteFile('${file.id}')">
+                           🗑️ Delete
+                       </button>
+                   </div>
+               </div>
+
+
+               ${file.category === 'IMAGE' ? `
+                   <div class="image-preview">
+                       <img
+                           src="${API_BASE}/files/${file.id}/download"
+                           alt="${escapeHtml(file.fileName)}"
+                           onerror="this.parentElement.style.display='none'"
+                       />
+                   </div>
+               ` : ''}
+
+
+               <div class="summary-box">
+                   <div class="summary-label">
+                       ${file.category === 'IMAGE' ? '🤖 AI Description' : '🤖 AI Summary'}
+                   </div>
+                   <p>${escapeHtml(file.summary || 'No summary available.')}</p>
+               </div>
+           </div>
+       `).join('');
+    }
+
+
+    // =========================================
+    // DELETE FILE
+    // =========================================
+    async function deleteFile(id) {
+        if (!confirm('Are you sure you want to delete this file?')) return;
+
+
+        try {
+            const response = await fetch(`${API_BASE}/files/${id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Delete failed');
+
+
+            // Animate removal
+            const item = document.getElementById('item-' + id);
+            if (item) {
+                item.style.transition = 'opacity 0.3s, transform 0.3s';
+                item.style.opacity = '0';
+                item.style.transform = 'scale(0.95)';
+                setTimeout(() => item.remove(), 300);
+            }
+
+
+            showToast('🗑️ File deleted.', 'success');
+
+
+            // Reload to check if list is empty
+            setTimeout(loadFileHistory, 400);
+
+
+        } catch (err) {
+            showToast(`❌ ${err.message}`, 'error');
+        }
+    }
+
+
+    // =========================================
+    // DOWNLOAD FILE
+    // =========================================
+    function downloadFile(id, fileName) {
+        const link = document.createElement('a');
+        link.href = `${API_BASE}/files/${id}/download`;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+
+    // =========================================
+    // TOAST NOTIFICATION
+    // =========================================
+    let toastTimer;
+    function showToast(message, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+
+    // =========================================
+    // UTILITIES
+    // =========================================
+    function getFileEmoji(mimeType) {
+        if (!mimeType) return '📄';
+        if (mimeType.startsWith('image/'))      return '🖼️';
+        if (mimeType === 'application/pdf')     return '📕';
+        if (mimeType.includes('word'))          return '📘';
+        return '📄';
+    }
+
+
+    function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let i = 0;
+        let size = bytes;
+        while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+        return `${size.toFixed(1)} ${units[i]}`;
+    }
+
+
+    function formatDate(isoString) {
+        if (!isoString) return '';
+        return new Date(isoString).toLocaleString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+
+    // =========================================
+    // INIT — load history on page load
+    // =========================================
+    loadFileHistory();
+</script>
+
+
+</body>
+</html>
